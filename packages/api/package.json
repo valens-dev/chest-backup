@@ -8,13 +8,13 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1159.0",
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@chest-backup/shared": "workspace:*",
     "@hono/bun": "^1.0.1",
     "@hono/node-server": "^2.1.5",
-    "basic-ftp": "^6.2.3",
-    "cron-parser": "^5.10.2",
-    "hono": "^4.13.14",
+    "basic-ftp": "^6.2.5",
+    "cron-parser": "^5.10.3",
+    "hono": "^4.13.16",
     "pino": "^10.4.0",
     "pino-pretty": "^13.2.0",
     "ssh2-sftp-client": "^12.1.1",
