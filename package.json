@@ -15,9 +15,10 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test --bail --timeout 120000 --path-ignore-patterns 'dist/**'",
     "test:e2e": "bash e2e-ui/run.sh",
-    "release:patch": "npm version patch -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags",
-    "release:minor": "npm version minor -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags",
-    "release:major": "npm version major -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags"
+    "release:patch": "npm version patch -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push",
+    "release:minor": "npm version minor -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push",
+    "release:major": "npm version major -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push",
+    "aur:verify": "bash contrib/aur/verify.sh"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",

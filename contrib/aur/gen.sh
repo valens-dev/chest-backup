@@ -13,9 +13,41 @@ case "$repo_url" in
   *) echo "error: origin is not a GitHub remote: $repo_url" >&2; exit 1 ;;
 esac
 repo="${repo%.git}"
-source_url="https://github.com/$repo/archive/v$pkgver.tar.gz"
+tag="v$pkgver"
 
-sha256="$(curl -fsSL "$source_url" | sha256sum | cut -d' ' -f1)"
+local_tag="$(git -C "$root" rev-parse "$tag" 2>/dev/null || true)"
+if [ -z "$local_tag" ]; then
+  echo "error: local tag $tag does not exist; create it first" >&2
+  exit 1
+fi
+remote_tag="$(git -C "$root" ls-remote --tags origin "$tag" 2>/dev/null | awk '{print $1}' | head -n1)"
+remote_tag_peeled="$(git -C "$root" ls-remote --tags origin "$tag^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
+[ -n "$remote_tag_peeled" ] && remote_tag="$remote_tag_peeled"
+if [ -z "$remote_tag" ]; then
+  echo "error: tag $tag is not pushed to origin; run 'git push --follow-tags' first" >&2
+  exit 1
+fi
+local_peeled="$(git -C "$root" rev-parse "$tag^{}" 2>/dev/null || git -C "$root" rev-parse "$tag")"
+if [ "$local_peeled" != "$remote_tag" ]; then
+  echo "error: local tag $tag ($local_peeled) differs from origin ($remote_tag)" >&2
+  exit 1
+fi
+
+source_url="https://github.com/$repo/archive/$tag.tar.gz"
+
+tmp_tar="$(mktemp)"
+trap 'rm -f "$tmp_tar"' EXIT
+http_code="$(curl -sSL -o "$tmp_tar" -w '%{http_code}' "$source_url")"
+if [ "$http_code" != "200" ]; then
+  echo "error: failed to download $source_url (HTTP $http_code)" >&2
+  exit 1
+fi
+magic="$(od -An -tx1 -N2 "$tmp_tar" | tr -d ' ')"
+if [ "$magic" != "1f8b" ]; then
+  echo "error: downloaded file is not a gzip tarball (bad tag or URL)" >&2
+  exit 1
+fi
+sha256="$(sha256sum "$tmp_tar" | cut -d' ' -f1)"
 
 make_makedepends() {
   printf "makedepends=(\n  'nodejs'\n  'pnpm'\n  'python'\n)\n"
@@ -49,3 +81,5 @@ emit "$root/contrib/aur/PKGBUILD" "chest-backup" "" "$sha256" "$(make_makedepend
 emit "$root/contrib/aur-bin/PKGBUILD" "chest-backup-bin" " (precompiled)" "SKIP" "" ""
 
 cp "$root/contrib/aur/chest-backup.install" "$root/contrib/aur-bin/chest-backup.install"
+
+echo "Generated PKGBUILDs for $tag (sha256: $sha256)"

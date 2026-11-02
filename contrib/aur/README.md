@@ -14,12 +14,14 @@ Builds from source. For a precompiled version with no build step, see
 ### 1. Tag the release
 
 ```bash
-# Bumps version (1.0.0 → 1.0.1), creates commit + signed tag, pushes
+# Bumps version (1.0.0 → 1.0.1), pushes the tag, regenerates the
+# PKGBUILD from GitHub's tarball for that tag, then pushes the PKGBUILD
 pnpm run release:patch
 
-# Or manually:
+# Or manually (tag MUST be pushed before running aur:gen):
 # git tag -s v1.0.0 -m "v1.0.0"
 # git push origin v1.0.0
+# pnpm aur:gen
 ```
 
 The PKGBUILD downloads the tagged tarball from GitHub.

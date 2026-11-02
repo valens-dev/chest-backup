@@ -28,7 +28,7 @@ optdepends=(
   'docker: container-based backup sources (sqlite-container, postgres-container)'
 )
 source=("$pkgname-$pkgver.tar.gz::https://github.com/valens-dev/chest-backup/archive/v$pkgver.tar.gz")
-sha256sums=('e1a80960d82dba61f80caf867e6a67dfd26e59d271bea925de24549b5cbc2b5e')
+sha256sums=('8c6b102c3feed99ea1faf75ea14abcc9662d53463902ec10440d655c22654d4c')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
