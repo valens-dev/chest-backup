@@ -1,6 +1,5 @@
 import { join, resolve } from "node:path"
 import { speedFor } from "../utils/upload"
-import SFTPClient from "ssh2-sftp-client"
 import {
   DestinationType,
   RestorePhase,
@@ -23,13 +22,14 @@ import type {
   ProcessFilesArgs,
   FileSelection,
   RestoreHandlerArgs,
+  RestoreDriverArgs,
 } from "../types/restore"
-import { connectClient } from "../destinations/sftp"
+import { getDriver } from "../destinations/drivers"
 import { normalizeBase } from "../utils/mirror"
 import { logger } from "../utils/logger"
 import { SFTP_SCAN_TIMEOUT_MS, withTimeout } from "../utils/timeout"
 import { listSnapshotFiles } from "./snapshots"
-import { isSafeRelative, normalizeRelative, restoreLocalFile, restoreSftpFile, targetPathFor } from "./transfer"
+import { isSafeRelative, normalizeRelative, restoreLocalFile, targetPathFor } from "./transfer"
 
 const selectFiles = (available: RestoreSnapshotFile[], requested: string[] | undefined): FileSelection => {
   if (!requested) return { selected: available, missing: [] }
@@ -134,24 +134,13 @@ const restoreLocal = (args: RestoreRunArgs): Promise<RestoreResult> =>
     ...args,
     handler: (file, onFileProgress) => restoreLocalFile(join(normalizeBase(args.dest.path), args.periodKey), file, args.context, onFileProgress),
   })
-const closeSftp = async (sftp: SFTPClient): Promise<void> => {
-  await sftp.end().catch((err: unknown) => {
-    logger.warn({ err }, "failed to close SFTP connection after restore")
-  })
-}
-const restoreSftp = async (args: RestoreRunArgs): Promise<RestoreResult> => {
-  if (!args.dest.host || !args.dest.user) throw new Error("SFTP destination missing host or user")
-  const sftp = new SFTPClient()
-  try {
-    await connectClient(sftp, args.dest)
-    return await restoreWithHandler({
-      ...args,
-      handler: (file, onFileProgress) => restoreSftpFile(sftp, `${normalizeBase(args.dest.path)}/${args.periodKey}`, file, args.context, onFileProgress),
-    })
-  } finally {
-    await closeSftp(sftp)
-  }
-}
+const buildDriverArgs = (args: RestoreRunArgs): RestoreDriverArgs => ({
+  dest: args.dest,
+  periodKey: args.periodKey,
+  files: args.files,
+  context: args.context,
+  restoreWithHandler: (handler) => restoreWithHandler({ ...args, handler }),
+})
 const createContext = (options: RestoreOptions): RestoreContext => ({
   targetRoot: resolve(options.targetRoot?.trim() || "/"),
   overwrite: options.overwrite ?? true,
@@ -175,7 +164,8 @@ const restoreSnapshot = async (dest: Destination, periodKey: string, options: Re
     currentFileTotal: 0,
     speed: 0,
   })
-  return dest.type === DestinationType.Local ? restoreLocal(args) : restoreSftp(args)
+  if (dest.type === DestinationType.Local) return restoreLocal(args)
+  return getDriver(dest.type).restore(buildDriverArgs(args))
 }
 
 export { restoreSnapshot }

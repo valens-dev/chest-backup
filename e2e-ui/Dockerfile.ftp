@@ -1,0 +1,12 @@
+FROM debian:trixie-slim
+
+RUN apt-get update -qq && \
+    apt-get install -y -qq --no-install-recommends vsftpd >/dev/null && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -u 1000 -d / -s /bin/sh chest && \
+    echo 'chest:chest' | chpasswd && \
+    mkdir -p /backups/ftp && chown -R chest:chest /backups && \
+    printf 'anonymous_enable=NO\nlocal_enable=YES\nwrite_enable=YES\nlisten=YES\nlisten_port=21\nlisten_ipv6=NO\nallow_writeable_chroot=YES\nsecure_chroot_dir=/run/vsftpd\n' > /etc/vsftpd.conf
+
+EXPOSE 21
+CMD ["sh", "-c", "chown -R chest:chest /backups && mkdir -p /run/vsftpd && service vsftpd start && tail -f /dev/null"]

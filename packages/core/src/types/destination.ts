@@ -1,11 +1,3 @@
-import type SFTPClient from "ssh2-sftp-client"
-
-type UploadProgress = {
-  uploadedSize: number
-  durationMs: number
-  speed: number
-}
-
 enum UploadOutcomeKind {
   Uploaded = "uploaded",
   Vanished = "vanished",
@@ -30,12 +22,6 @@ type DeleteOutcome = {
   failed: number
 }
 
-interface UploadContext {
-  sftp: SFTPClient
-  base: string
-  createdDirs: Set<string>
-}
-
 type ProgressPhase =
   | "run-start"
   | "archiving"
@@ -58,19 +44,23 @@ interface BackupProgressEvent {
 
 type BackupProgressCallback = (event: BackupProgressEvent) => void
 
-interface SftpUsage {
+interface RemoteUsage {
   totalSize: number
   fileCount: number
 }
 
+interface DiskSpace {
+  used: number
+  total: number
+}
+
 export {
   UploadOutcomeKind,
-  type UploadProgress,
   type FileUploadResult,
   type UploadOutcome,
   type DeleteOutcome,
-  type UploadContext,
   type BackupProgressEvent,
   type BackupProgressCallback,
-  type SftpUsage,
+  type RemoteUsage,
+  type DiskSpace,
 }

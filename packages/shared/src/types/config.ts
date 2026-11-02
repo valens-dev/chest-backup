@@ -30,6 +30,9 @@ interface Destination {
   user?: string
   password?: string
   privateKey?: string
+  region?: string
+  accessKeyId?: string
+  secretAccessKey?: string
   parallel?: boolean
   timeout?: number
   skip?: boolean

@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Header } from "@/components/layout/header"
-import { SftpFields } from "@/components/destinations/sftp-fields"
+import { DestinationTypeFields } from "@/components/destinations/type-fields"
 import { DestinationType } from "@chest-backup/shared"
 import { useDestination, useUpdateDestination } from "@/hooks/queries/destinations"
-import { toDestinationType } from "@/lib/enums"
+import { DestinationFormProvider } from "@/hooks/use-destination-form"
+import { toDestinationTypeFromForm } from "@/lib/enums"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import * as styles from "./page.styles"
 
@@ -26,13 +27,6 @@ const DestinationEditPage = () => {
 
   const updateField = (key: string, value: unknown): void => {
     setForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const sftpLabels = {
-    host: t("destinations.host"),
-    port: t("destinations.port"),
-    user: t("destinations.user"),
-    password: t("destinations.password"),
   }
 
   useEffect(() => {
@@ -54,11 +48,11 @@ const DestinationEditPage = () => {
 
   if (!dest) return null
 
-  const type = toDestinationType(typeof form.type === "string" ? form.type : "")
+  const type = toDestinationTypeFromForm(form)
 
   return (
     <div className={styles.page}>
-      <Header title={t("destinations.editDestination")} subtitle={`${t("destinations.typeLabel")}: ${type}`} />
+      <Header title={t("destinations.editDestination")} subtitle={`${t("destinations.typeLabel")}: ${t(`destinations.${type}`)}`} />
 
       <Card>
         <CardHeader>
@@ -73,6 +67,8 @@ const DestinationEditPage = () => {
             >
               <option value={DestinationType.Local}>{t("destinations.local")}</option>
               <option value={DestinationType.Sftp}>{t("destinations.sftp")}</option>
+              <option value={DestinationType.S3}>{t("destinations.s3")}</option>
+              <option value={DestinationType.Ftp}>{t("destinations.ftp")}</option>
             </Select>
           </div>
 
@@ -93,40 +89,24 @@ const DestinationEditPage = () => {
             />
           </div>
 
-          {type === DestinationType.Sftp && (
-            <SftpFields
-              props={{
-                host: form.host as string,
-                port: form.port as number,
-                user: form.user as string,
-                password: form.password as string,
-                privateKey: form.privateKey as string,
-                timeout: form.timeout as number | undefined,
-                onHostChange: (v) => { updateField("host", v); },
-                onPortChange: (v) => { updateField("port", v); },
-                onUserChange: (v) => { updateField("user", v); },
-                onPasswordChange: (v) => { updateField("password", v); },
-                onPrivateKeyChange: (v) => { updateField("privateKey", v); },
-                onTimeoutChange: (v) => { updateField("timeout", v); },
-                labels: sftpLabels,
-              }}
-            />
-          )}
+          <DestinationFormProvider form={form} update={updateField}>
+            <DestinationTypeFields />
+          </DestinationFormProvider>
 
           <div className={styles.toggleRow}>
             <span className={styles.toggleLabel}>{t("destinations.parallel")}</span>
-              <Switch
-                checked={form.parallel as boolean}
-                onCheckedChange={(v) => { updateField("parallel", v); }}
-              />
+            <Switch
+              checked={form.parallel as boolean}
+              onCheckedChange={(v) => { updateField("parallel", v); }}
+            />
           </div>
 
           <div className={styles.toggleRow}>
             <span className={styles.toggleLabel}>{t("destinations.skip")}</span>
-              <Switch
-                checked={form.skip as boolean}
-                onCheckedChange={(v) => { updateField("skip", v); }}
-              />
+            <Switch
+              checked={form.skip as boolean}
+              onCheckedChange={(v) => { updateField("skip", v); }}
+            />
           </div>
 
           <div className={styles.actions}>

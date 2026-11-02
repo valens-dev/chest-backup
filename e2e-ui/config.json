@@ -1,9 +1,0 @@
-{
-  "retention": 7,
-  "retentionMode": "months",
-  "paths": [],
-  "sqlite": [],
-  "exclude": [],
-  "sources": [],
-  "destinations": []
-}

@@ -1,15 +1,11 @@
 import { RetentionMode } from "@core/types/config"
+import type { DiskSpace } from "@core/types/destination"
 
 interface PaginatedResult<T> {
   data: T[]
   total: number
   page: number
   limit: number
-}
-
-interface DiskSpace {
-  used: number
-  total: number
 }
 
 interface DestinationUsage {
@@ -84,7 +80,6 @@ interface DestinationRef {
 export type {
   PaginatedResult,
   BackupStats,
-  DiskSpace,
   DestinationUsage,
   LocalUsage,
   Result,

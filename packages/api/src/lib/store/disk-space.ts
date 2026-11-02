@@ -3,7 +3,9 @@ import { tmpdir, homedir } from "node:os"
 import { join } from "node:path"
 import { execFile } from "node:child_process"
 import type { Destination } from "@core/types/config"
-import type { DiskSpace } from "../../types/api"
+import { DestinationType } from "@chest-backup/shared"
+import type { DiskSpace } from "@core/types/destination"
+import { getDriver } from "@core/destinations/drivers"
 import { logger } from "@core/utils/logger"
 
 const SSH_PROBE_TIMEOUT_MS = 5_000
@@ -20,7 +22,8 @@ const writeTempKey = (keyMaterial: string): string | undefined => {
     const keyPath = join(dir, "id")
     writeFileSync(keyPath, keyMaterial, { mode: 0o600 })
     return keyPath
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, "failed to write temporary ssh key")
     return undefined
   }
 }
@@ -42,7 +45,8 @@ const resolveSshKey = (dest: Destination): string | undefined => {
   try {
     const material = isPath ? readFileSync(key.replace(/^~/, homedir()), "utf8") : key
     return writeTempKey(material)
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, "failed to resolve ssh key")
     return undefined
   }
 }
@@ -93,11 +97,16 @@ const getLocalDiskSpace = (dir: string): DiskSpace | undefined => {
     const free = stats.bavail * stats.bsize
     if (total <= 0) return undefined
     return { used: total - free, total }
-  } catch {
+  } catch (err) {
+    logger.debug({ dir, err }, "local disk space probe failed")
     return undefined
   }
 }
 
-const getSftpDiskSpace = async (dest: Destination): Promise<DiskSpace | undefined> => runRemoteDf(dest)
+const getRemoteDiskSpace = async (dest: Destination): Promise<DiskSpace | undefined> => {
+  if (dest.type === DestinationType.Sftp) return runRemoteDf(dest)
+  const driverGet = getDriver(dest.type).getDiskSpace
+  return driverGet ? driverGet(dest) : undefined
+}
 
-export { getLocalDiskSpace, getSftpDiskSpace }
+export { getLocalDiskSpace, getRemoteDiskSpace }

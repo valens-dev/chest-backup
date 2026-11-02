@@ -15,7 +15,7 @@ const nodeMatches = (node: TreeNode, needle: string): boolean =>
 
 const FileRow = ({ file, selected, onToggle }: FileRowProps) => (
   <label className={cn(styles.row, styles.fileRow, selected && styles.rowSelected)}>
-    <input type="checkbox" className={styles.checkbox} checked={selected} onChange={onToggle} />
+    <input type="checkbox" data-file-checkbox className={styles.checkbox} checked={selected} onChange={onToggle} />
     <FileIcon className={styles.fileIcon} />
     <span className={styles.fileName}>{file.name}</span>
     <span className={styles.fileSize}>{formatSize(file.size)}</span>

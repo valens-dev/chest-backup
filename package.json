@@ -14,10 +14,14 @@
     "lint": "eslint packages/",
     "typecheck": "tsc --noEmit",
     "test": "bun test --bail --timeout 120000 --path-ignore-patterns 'dist/**'",
-    "test:e2e": "node -e \"require('fs').writeFileSync('e2e-ui/config.json', JSON.stringify({retention:7,retentionMode:'months',paths:[],sqlite:[],exclude:[],sources:[],destinations:[]},null,2)+'\\n')\" && rm -rf e2e-ui/sftp-data && docker compose -f e2e-ui/docker-compose.yml up -d --build app postgres sftp sqldb appvol && sleep 8 && docker compose -f e2e-ui/docker-compose.yml run --rm browser; EXIT=$?; docker compose -f e2e-ui/docker-compose.yml down --remove-orphans -v; exit $EXIT",
+    "test:e2e": "bash e2e-ui/run.sh",
     "release:patch": "npm version patch -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags",
     "release:minor": "npm version minor -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags",
     "release:major": "npm version major -m \"chore(release): v%s\" && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit --amend --no-edit && git push --follow-tags"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1159.0",
+    "basic-ftp": "^6.2.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

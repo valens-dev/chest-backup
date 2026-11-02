@@ -3,10 +3,11 @@ import { dirname } from "node:path"
 import type { Destination } from "@core/types/config"
 import { DestinationType } from "@chest-backup/shared"
 import type { DestinationUsage } from "../../types/api"
-import { scanSftpUsage } from "@core/destinations/sftp"
+import type { RemoteUsage } from "@core/types/destination"
+import { getDriver } from "@core/destinations/drivers"
 import { SFTP_SCAN_TIMEOUT_MS, withTimeout } from "@core/utils/timeout"
 import { scanLocalUsage } from "../utils"
-import { getLocalDiskSpace, getSftpDiskSpace } from "./disk-space"
+import { getLocalDiskSpace, getRemoteDiskSpace } from "./disk-space"
 import { readBackupHistory } from "./backups"
 
 const destAvgDurationMs = (dest: Destination): number => {
@@ -39,10 +40,12 @@ const buildLocalUsage = (dest: Destination, avgDurationMs: number): DestinationU
   }
 }
 
-const buildSftpUsage = async (dest: Destination, avgDurationMs: number): Promise<DestinationUsage | null> => {
+const scanRemoteUsage = (dest: Destination): Promise<RemoteUsage | null> => getDriver(dest.type).scanUsage(dest)
+
+const buildRemoteUsage = async (dest: Destination, avgDurationMs: number): Promise<DestinationUsage | null> => {
   const [usage, diskSpace] = await Promise.all([
-    withTimeout(scanSftpUsage(dest), SFTP_SCAN_TIMEOUT_MS, null),
-    getSftpDiskSpace(dest),
+    withTimeout(scanRemoteUsage(dest), SFTP_SCAN_TIMEOUT_MS, null),
+    getRemoteDiskSpace(dest),
   ])
   if (!usage) return null
 
@@ -66,11 +69,11 @@ const buildUnavailableUsage = async (dest: Destination, avgDurationMs: number): 
   fileCount: 0,
   avgDurationMs,
   available: false,
-  diskSpace: dest.type === DestinationType.Local ? getLocalDiskSpace(dirname(dest.path)) : await getSftpDiskSpace(dest),
+  diskSpace: dest.type === DestinationType.Local ? getLocalDiskSpace(dirname(dest.path)) : await getRemoteDiskSpace(dest),
 })
 
 const buildDestUsage = async (dest: Destination, avgDurationMs: number): Promise<DestinationUsage> => {
-  const usage = dest.type === DestinationType.Local ? buildLocalUsage(dest, avgDurationMs) : await buildSftpUsage(dest, avgDurationMs)
+  const usage = dest.type === DestinationType.Local ? buildLocalUsage(dest, avgDurationMs) : await buildRemoteUsage(dest, avgDurationMs)
   return usage ?? buildUnavailableUsage(dest, avgDurationMs)
 }
 

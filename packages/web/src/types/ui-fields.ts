@@ -1,26 +1,5 @@
 import type { ContainerVolume } from "@chest-backup/shared"
 
-interface SftpFieldsProps {
-  host: string
-  port: number
-  user: string
-  password: string
-  privateKey: string
-  timeout?: number
-  onHostChange: (v: string) => void
-  onPortChange: (v: number) => void
-  onUserChange: (v: string) => void
-  onPasswordChange: (v: string) => void
-  onPrivateKeyChange: (v: string) => void
-  onTimeoutChange: (v: number | undefined) => void
-  labels: {
-    host: string
-    port: string
-    user: string
-    password: string
-  }
-}
-
 interface PostgresFieldsProps {
   form: Record<string, unknown>
   update: (key: string, value: unknown) => void
@@ -78,4 +57,11 @@ interface PostgresDatabasesParams {
   fieldsReady: boolean
 }
 
-export type { SftpFieldsProps, PostgresFieldsProps, SqliteFieldsProps, ContainerVolumeFieldsProps, EditSourceFieldsProps, ContainerSelectProps, PostgresDatabasesParams }
+export type {
+  PostgresFieldsProps,
+  SqliteFieldsProps,
+  ContainerVolumeFieldsProps,
+  EditSourceFieldsProps,
+  ContainerSelectProps,
+  PostgresDatabasesParams,
+}

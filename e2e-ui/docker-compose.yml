@@ -22,6 +22,10 @@ services:
         condition: service_healthy
       sftp:
         condition: service_healthy
+      garage:
+        condition: service_started
+      ftp:
+        condition: service_healthy
 
   postgres:
     image: postgres:18-alpine
@@ -70,6 +74,33 @@ services:
       timeout: 3s
       retries: 30
 
+  garage:
+    build:
+      context: ..
+      dockerfile: e2e-ui/Dockerfile.garage
+    container_name: chest-e2eui-garage
+    ports:
+      - "4566:3900"
+    volumes:
+      - ./garage-data:/data
+    healthcheck:
+      test: ["NONE"]
+
+  ftp:
+    build:
+      context: ..
+      dockerfile: e2e-ui/Dockerfile.ftp
+    container_name: chest-e2eui-ftp
+    ports:
+      - "2121:21"
+    volumes:
+      - ./ftp-data:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/21' || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   browser:
     build:
       context: ..
@@ -84,3 +115,4 @@ services:
 volumes:
   sqldb-data:
   appvol-data:
+  garage-data:

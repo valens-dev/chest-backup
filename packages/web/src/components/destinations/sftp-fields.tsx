@@ -1,58 +1,59 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useTranslation } from "react-i18next"
-import type { SftpFieldsProps } from "@/types/ui-fields"
+import { useDestinationForm } from "@/hooks/use-destination-form"
 import * as styles from "./sftp-fields.styles"
 
-const SftpFields = ({ props }: { props: SftpFieldsProps }) => {
+const SftpFields = () => {
   const { t } = useTranslation()
+  const { form, update } = useDestinationForm()
 
   return (
     <>
       <div className={styles.fieldGroup}>
-        <Label>{props.labels.host}</Label>
+        <Label>{t("destinations.sftpHost")}</Label>
         <Input
-          value={props.host}
+          value={form.host as string}
           onChange={(e) => {
-            props.onHostChange(e.target.value)
+            update("host", e.target.value)
           }}
         />
       </div>
       <div className={styles.fieldGroup}>
-        <Label>{props.labels.port}</Label>
+        <Label>{t("destinations.sftpPort")}</Label>
         <Input
           type="number"
-          value={props.port}
+          value={form.port as number}
           onChange={(e) => {
-            props.onPortChange(Number(e.target.value))
+            update("port", Number(e.target.value))
           }}
         />
       </div>
       <div className={styles.fieldGroup}>
-        <Label>{props.labels.user}</Label>
+        <Label>{t("destinations.sftpUser")}</Label>
         <Input
-          value={props.user}
+          value={form.user as string}
           onChange={(e) => {
-            props.onUserChange(e.target.value)
+            update("user", e.target.value)
           }}
         />
       </div>
       <div className={styles.fieldGroup}>
-        <Label>{props.labels.password}</Label>
+        <Label>{t("destinations.sftpPassword")}</Label>
         <Input
           type="password"
-          value={props.password}
+          value={form.password as string}
           onChange={(e) => {
-            props.onPasswordChange(e.target.value)
+            update("password", e.target.value)
           }}
         />
       </div>
       <div className={styles.fieldGroup}>
         <Label>{t("destinations.privateKey")}</Label>
         <Input
-          value={props.privateKey}
+          value={form.privateKey as string}
           onChange={(e) => {
-            props.onPrivateKeyChange(e.target.value)
+            update("privateKey", e.target.value)
           }}
         />
       </div>
@@ -60,9 +61,9 @@ const SftpFields = ({ props }: { props: SftpFieldsProps }) => {
         <Label>{t("destinations.timeout")}</Label>
         <Input
           type="number"
-          value={props.timeout ?? ""}
+          value={(form.timeout as number | undefined) ?? ""}
           onChange={(e) => {
-            props.onTimeoutChange(e.target.value ? Number(e.target.value) : undefined)
+            update("timeout", e.target.value ? Number(e.target.value) : undefined)
           }}
         />
       </div>

@@ -1,0 +1,6 @@
+FROM dxflrs/garage:v2.5.0
+COPY e2e-ui/init/garage.toml /etc/garage.toml
+ENV GARAGE_DEFAULT_ACCESS_KEY="GKe2eAccess" \
+    GARAGE_DEFAULT_SECRET_KEY="chest-e2e-secret-key-0123456789abcdef" \
+    GARAGE_DEFAULT_BUCKET="backups"
+CMD ["/garage", "server", "--single-node", "--default-bucket"]

@@ -1,27 +1,15 @@
-import { execSync } from "node:child_process"
-import { expect, test, type Page } from "@playwright/test"
-
-const dockerExec = (container: string, cmd: string): string =>
-  execSync(`docker exec ${container} ${cmd}`, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()
-
-const selectType = async (page: Page, value: string): Promise<void> => {
-  const firstSelect = page.locator("select").first()
-  await firstSelect.selectOption(value)
-}
-
-const addSource = async (page: Page, fill: (page: Page) => Promise<void>): Promise<void> => {
-  await page.goto("/sources/new")
-  await fill(page)
-  await page.getByRole("button", { name: "Create" }).click()
-  await page.waitForSelector('text=Manage backup sources', { timeout: 60_000 })
-}
-
-const addDestination = async (page: Page, fill: (page: Page) => Promise<void>): Promise<void> => {
-  await page.goto("/destinations/new")
-  await fill(page)
-  await page.getByRole("button", { name: "Create" }).click()
-  await page.waitForSelector('text=Manage backup destinations', { timeout: 60_000 })
-}
+import { expect, test } from "@playwright/test"
+import {
+  addDestination,
+  addSource,
+  dockerExec,
+  groupInput,
+  restoreFromDestination,
+  s3ListCount,
+  selectType,
+  waitForFiles,
+  waitForRestoredFile,
+} from "./ui-support"
 
 test.describe("full UI round-trip: sources + destinations -> backup -> restore", () => {
   test("add every source type via the UI", async ({ page }) => {
@@ -60,7 +48,7 @@ test.describe("full UI round-trip: sources + destinations -> backup -> restore",
     }
   })
 
-  test("add local and sftp destinations via the UI", async ({ page }) => {
+  test("add local, sftp, s3 and ftp destinations via the UI", async ({ page }) => {
     await addDestination(page, async (p) => {
       await p.locator("#name").fill("Local")
       await p.locator("#path").fill("/backups/local")
@@ -70,16 +58,37 @@ test.describe("full UI round-trip: sources + destinations -> backup -> restore",
       await selectType(p, "sftp")
       await p.locator("#name").fill("SFTP")
       await p.locator("#path").fill("/backups/sftp")
-      const group = (label: string): ReturnType<Page["locator"]> => p.locator(`css=div >> text="${label}"`).locator("..").locator("input")
-      await group("SFTP Host").fill("sftp")
-      await group("SFTP Port").fill("22")
-      await group("SFTP User").fill("chest")
-      await group("SFTP Password").fill("chest")
+      await groupInput(p, "SFTP Host").fill("sftp")
+      await groupInput(p, "SFTP Port").fill("22")
+      await groupInput(p, "SFTP User").fill("chest")
+      await groupInput(p, "SFTP Password").fill("chest")
+    })
+
+    await addDestination(page, async (p) => {
+      await selectType(p, "s3")
+      await p.locator("#name").fill("S3")
+      await p.locator("#path").fill("/backups")
+      await groupInput(p, "S3 Endpoint Host").fill("garage")
+      await groupInput(p, "S3 Port").fill("3900")
+      await groupInput(p, "Region").fill("garage")
+      await groupInput(p, "Access Key ID").fill("GKe2eAccess")
+      await groupInput(p, "Secret Access Key").fill("chest-e2e-secret-key-0123456789abcdef")
+    })
+
+    await addDestination(page, async (p) => {
+      await selectType(p, "ftp")
+      await p.locator("#name").fill("FTP")
+      await p.locator("#path").fill("/backups/ftp")
+      await groupInput(p, "FTP Host").fill("ftp")
+      await groupInput(p, "FTP Port").fill("21")
+      await groupInput(p, "FTP User").fill("chest")
+      await groupInput(p, "FTP Password").fill("chest")
     })
 
     await page.goto("/destinations")
-    await expect(page.getByText("Local").first()).toBeVisible()
-    await expect(page.getByText("SFTP").first()).toBeVisible()
+    for (const name of ["Local", "SFTP", "S3", "FTP"]) {
+      await expect(page.getByText(name).first()).toBeVisible()
+    }
   })
 
   test("trigger a backup from the UI and wait for it to complete", async ({ page }) => {
@@ -88,45 +97,59 @@ test.describe("full UI round-trip: sources + destinations -> backup -> restore",
     await expect(page.getByText("Backup Complete")).toBeVisible({ timeout: 180_000 })
   })
 
-  test("backup landed real data on both destinations", async () => {
-    const waitForFiles = async (container: string, path: string): Promise<number> => {
-      for (let i = 0; i < 30; i++) {
-        const count = Number(dockerExec(container, `find ${path} -type f | wc -l`))
-        if (count >= 2) return count
-        await new Promise((resolve) => setTimeout(resolve, 1_000))
-      }
-      return Number(dockerExec(container, `find ${path} -type f | wc -l`))
-    }
-
+  test("backup landed real data on all destinations", async () => {
     const localFiles = await waitForFiles("chest-e2eui-app", "/backups/local")
     expect(localFiles).toBeGreaterThanOrEqual(2)
 
     const sftpCount = await waitForFiles("chest-e2eui-sftp", "/backups/sftp")
     expect(sftpCount).toBeGreaterThanOrEqual(2)
 
+    const ftpCount = await waitForFiles("chest-e2eui-ftp", "/backups/ftp")
+    expect(ftpCount).toBeGreaterThanOrEqual(2)
+
     const sqliteDump = dockerExec("chest-e2eui-app", "find /backups/local -name '*sqldb*.db' | head -1")
     expect(sqliteDump).not.toBe("")
   })
 
-  test("trigger a restore from the UI into a fresh path", async ({ page }) => {
-    await page.goto("/restore")
-    await expect(page.locator('#restore-dest option').nth(1)).toHaveCount(1, { timeout: 60_000 })
-    await page.locator("#restore-dest").selectOption({ index: 1 })
-    await expect(page.locator('#restore-snapshot option:not([value=""])')).toHaveCount(1, { timeout: 60_000 })
-    const snapshotValue = (await page.locator('#restore-snapshot option:not([value=""])').getAttribute("value")) ?? ""
-    await page.locator("#restore-snapshot").selectOption(snapshotValue)
-
-    await page.getByPlaceholder("Search files…").fill("hostname")
-    await page.locator('input[type="checkbox"]').last().check()
-
-    await page.locator("#restore-target").fill("/restored")
-    await page.getByRole("button", { name: /^Restore/ }).first().click()
-    await page.getByRole("dialog").getByRole("button", { name: "Restore" }).click()
-    await expect(page.getByText("Success")).toBeVisible({ timeout: 180_000 })
+  test("backup landed real data in the S3 bucket", async () => {
+    for (let i = 0; i < 30; i++) {
+      const count = await s3ListCount()
+      if (count >= 2) return
+      await new Promise((resolve) => setTimeout(resolve, 1_000))
+    }
+    expect(await s3ListCount()).toBeGreaterThanOrEqual(2)
   })
 
-  test("restored data is present on disk in the app container", () => {
-    const restored = dockerExec("chest-e2eui-app", "find /restored -type f | wc -l")
-    expect(Number(restored)).toBeGreaterThan(0)
+  test("restore from SFTP lands data on disk", async ({ browser }) => {
+    const context = await browser.newContext()
+    try {
+      await restoreFromDestination(context, "SFTP", "/restored-sftp")
+    } finally {
+      await context.close()
+    }
+    const restored = await waitForRestoredFile("chest-e2eui-app", "/restored-sftp")
+    expect(restored).toBeGreaterThan(0)
+  })
+
+  test("restore from S3 lands data on disk", async ({ browser }) => {
+    const context = await browser.newContext()
+    try {
+      await restoreFromDestination(context, "S3", "/restored-s3")
+    } finally {
+      await context.close()
+    }
+    const restored = await waitForRestoredFile("chest-e2eui-app", "/restored-s3")
+    expect(restored).toBeGreaterThan(0)
+  })
+
+  test("restore from FTP lands data on disk", async ({ browser }) => {
+    const context = await browser.newContext()
+    try {
+      await restoreFromDestination(context, "FTP", "/restored-ftp")
+    } finally {
+      await context.close()
+    }
+    const restored = await waitForRestoredFile("chest-e2eui-app", "/restored-ftp")
+    expect(restored).toBeGreaterThan(0)
   })
 })

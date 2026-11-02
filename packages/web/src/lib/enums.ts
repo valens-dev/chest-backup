@@ -17,4 +17,7 @@ const toTimeRange = (value: string): TimeRange => TIME_RANGE_BY_VALUE.get(value)
 const toActivityTab = (value: string): ActivityTab => ACTIVITY_TAB_BY_VALUE.get(value) ?? ActivityTab.Runs
 const toDestinationType = (value: string): DestinationType => DESTINATION_TYPE_BY_VALUE.get(value) ?? DestinationType.Local
 
-export { toRunStatus, toRunTrigger, toLogLevel, toRunSort, toTimeRange, toActivityTab, toDestinationType }
+const toDestinationTypeFromForm = (form: Record<string, unknown>): DestinationType =>
+  toDestinationType(typeof form.type === "string" ? form.type : "")
+
+export { toRunStatus, toRunTrigger, toLogLevel, toRunSort, toTimeRange, toActivityTab, toDestinationType, toDestinationTypeFromForm }

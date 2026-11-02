@@ -2,7 +2,6 @@ import { createReadStream, createWriteStream } from "node:fs"
 import { chmod, lstat, mkdir, stat, utimes } from "node:fs/promises"
 import { dirname, join, resolve, sep } from "node:path"
 import { pipeline } from "node:stream/promises"
-import SFTPClient from "ssh2-sftp-client"
 import { RestoreFileStatus, type RestoreSnapshotFile } from "@chest-backup/shared"
 import type { RestoreContext, FileOutcome, TargetResolution, FileProgressCallback, FileProgressReporter } from "../types/restore"
 import { logger } from "../utils/logger"
@@ -85,6 +84,19 @@ const throttledReporter = (onFileProgress: FileProgressCallback, total: number):
   }
 }
 
+const appendChunkToFile = async (target: string, chunk: Buffer): Promise<void> => {
+  const stream = createWriteStream(target, { flags: "a" })
+  await new Promise<void>((resolvePromise, rejectPromise) => {
+    stream.on("open", () => {
+      resolvePromise()
+    })
+    stream.on("error", (err: Error) => {
+      rejectPromise(err)
+    })
+    stream.end(chunk)
+  })
+}
+
 const copyWithProgress = async (source: string, target: string, total: number, onFileProgress: FileProgressCallback): Promise<void> => {
   const report = throttledReporter(onFileProgress, total)
   const reader = createReadStream(source)
@@ -105,20 +117,4 @@ const copyLocalFile = async (sourceRoot: string, file: RestoreSnapshotFile, cont
 const restoreLocalFile = async (sourceRoot: string, file: RestoreSnapshotFile, context: RestoreContext, onFileProgress: FileProgressCallback): Promise<FileOutcome> =>
   (context.dryRun ? dryRunOutcome(file, context) : copyLocalFile(sourceRoot, file, context, onFileProgress))
 
-const fetchSftpFile = async (sftp: SFTPClient, sourceRoot: string, file: RestoreSnapshotFile, context: RestoreContext, onFileProgress: FileProgressCallback): Promise<FileOutcome> => {
-  const { target, skipped } = await resolveTarget(file, context)
-  if (skipped) return skippedOutcome(file.path, target, file.size)
-  const report = throttledReporter(onFileProgress, file.size)
-  await sftp.fastGet(`${sourceRoot}/${file.path}`, target, {
-    concurrency: 64,
-    chunkSize: 262_144,
-    step: (transferred) => report(transferred, file.size),
-  })
-  report(file.size, file.size)
-  return restoredOutcome(file.path, target, file.size)
-}
-
-const restoreSftpFile = async (sftp: SFTPClient, sourceRoot: string, file: RestoreSnapshotFile, context: RestoreContext, onFileProgress: FileProgressCallback): Promise<FileOutcome> =>
-  (context.dryRun ? dryRunOutcome(file, context) : fetchSftpFile(sftp, sourceRoot, file, context, onFileProgress))
-
-export { normalizeRelative, isSafeRelative, targetPathFor, restoreLocalFile, restoreSftpFile }
+export { normalizeRelative, isSafeRelative, targetPathFor, resolveTarget, skippedOutcome, restoredOutcome, dryRunOutcome, throttledReporter, appendChunkToFile, restoreLocalFile }

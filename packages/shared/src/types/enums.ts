@@ -6,6 +6,8 @@ enum SourceErrorCode {
 enum DestinationType {
   Local = "local",
   Sftp = "sftp",
+  S3 = "s3",
+  Ftp = "ftp",
 }
 
 enum RunStatus {

@@ -1,4 +1,4 @@
-import type { RestoreFileResult, RestoreProgressEvent, RestoreSnapshotFile } from "@chest-backup/shared"
+import type { RestoreFileResult, RestoreProgressEvent, RestoreResult, RestoreSnapshotFile } from "@chest-backup/shared"
 import type { Destination } from "./config"
 
 interface RestoreContext {
@@ -85,6 +85,10 @@ interface ProcessFilesArgs {
   onProgress?: RestoreProgressCallback
 }
 
+type RestoreDriverArgs = Omit<RestoreRunArgs, "missing" | "signal" | "onProgress"> & {
+  restoreWithHandler: (handler: FileRestoreHandler) => Promise<RestoreResult>
+}
+
 export type {
   RestoreContext,
   FileOutcome,
@@ -100,4 +104,5 @@ export type {
   ProcessFilesArgs,
   FileSelection,
   RestoreHandlerArgs,
+  RestoreDriverArgs,
 }
