@@ -15,9 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test --bail --timeout 120000 --path-ignore-patterns 'dist/**'",
     "test:e2e": "bash e2e-ui/run.sh",
-    "release:patch": "npm version patch -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push && pnpm aur:publish",
-    "release:minor": "npm version minor -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push && pnpm aur:publish",
-    "release:major": "npm version major -m \"chore(release): v%s\" && git push --follow-tags && pnpm aur:gen && git add contrib/aur/PKGBUILD contrib/aur-bin/PKGBUILD && git commit -m \"chore(aur): regenerate PKGBUILD for v$(node -p \"require('./package.json').version\")\" && git push && pnpm aur:publish",
+    "release:patch": "bash contrib/aur/release.sh patch",
+    "release:minor": "bash contrib/aur/release.sh minor",
+    "release:major": "bash contrib/aur/release.sh major",
     "aur:verify": "bash contrib/aur/verify.sh",
     "aur:publish": "bash contrib/aur/publish.sh"
   },
